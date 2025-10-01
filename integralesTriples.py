@@ -3,10 +3,6 @@ from sympy import symbols, integrate, latex, sympify
 
 app = Flask(__name__)
 
-@app.route("/")
-def home():
-    return "API de Integrales funcionando bb"
-    
 @app.route("/integral", methods=["POST"])
 def integral():
     data = request.json
@@ -46,5 +42,7 @@ def integral():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+
+
 
 
