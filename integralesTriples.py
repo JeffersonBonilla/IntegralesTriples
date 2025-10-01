@@ -5,57 +5,46 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "API de Integrales funcionando Papi"
-
+    return "API de Integrales funcionando bb"
+    
 @app.route("/integral", methods=["POST"])
 def integral():
     data = request.json
-    expr_str = data.get("expr")      # función como string, ej: "x*y + z"
-    x1 = data.get("x1")
-    x2 = data.get("x2")
-    y1 = data.get("y1")
-    y2 = data.get("y2")
-    z1 = data.get("z1")
-    z2 = data.get("z2")
+    expr_str = data.get("expr")
+    x1, x2 = data.get("x1"), data.get("x2")
+    y1, y2 = data.get("y1"), data.get("y2")
+    z1, z2 = data.get("z1"), data.get("z2")
 
     try:
-        # Crear símbolos según los datos recibidos
         variables = {}
-        if x1 and x2:
-            variables['x'] = symbols('x')
-        if y1 and y2:
-            variables['y'] = symbols('y')
-        if z1 and z2:
-            variables['z'] = symbols('z')
+        if x1 and x2: variables['x'] = symbols('x')
+        if y1 and y2: variables['y'] = symbols('y')
+        if z1 and z2: variables['z'] = symbols('z')
 
-        expr = sympify(expr_str)  # Convertir string a expresión Sympy
-
-        # Integración paso a paso según límites disponibles
-        result = expr
+        expr = sympify(expr_str)
         pasos = []
+        current_expr = expr
 
+        # Integración paso a paso
         if 'z' in variables:
-            result = integrate(result, (variables['z'], float(z1), float(z2)))
-            pasos.append(f"Integrando respecto a z: {latex(result)}")
+            paso = integrate(current_expr, (variables['z'], float(z1), float(z2)))
+            pasos.append(f"\\textbf{{1. Integrando respecto a z:}} \\\\ $\\int_{{{z1}}}^{{{z2}}} {latex(current_expr)} \\, dz = {latex(paso)}$")
+            current_expr = paso
         if 'y' in variables:
-            result = integrate(result, (variables['y'], float(y1), float(y2)))
-            pasos.append(f"Integrando respecto a y: {latex(result)}")
+            paso = integrate(current_expr, (variables['y'], float(y1), float(y2)))
+            pasos.append(f"\\textbf{{2. Integrando respecto a y:}} \\\\ $\\int_{{{y1}}}^{{{y2}}} {latex(current_expr)} \\, dy = {latex(paso)}$")
+            current_expr = paso
         if 'x' in variables:
-            result = integrate(result, (variables['x'], float(x1), float(x2)))
-            pasos.append(f"Integrando respecto a x: {latex(result)}")
+            paso = integrate(current_expr, (variables['x'], float(x1), float(x2)))
+            pasos.append(f"\\textbf{{3. Integrando respecto a x:}} \\\\ $\\int_{{{x1}}}^{{{x2}}} {latex(current_expr)} \\, dx = {latex(paso)}$")
+            current_expr = paso
 
         return jsonify({
-            "resultado": str(result),
-            "latex": latex(result),
+            "resultado": str(current_expr),
+            "latex": latex(current_expr),
             "pasos": pasos
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
-if __name__ == "__main__":
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
-
 
 
