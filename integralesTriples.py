@@ -3,6 +3,10 @@ from sympy import symbols, integrate, latex, sympify
 
 app = Flask(__name__)
 
+@app.route("/")
+def home():
+    return "API de Integrales funcionando 🚀"
+
 @app.route("/integral", methods=["POST"])
 def integral():
     data = request.json
@@ -12,7 +16,6 @@ def integral():
     z1, z2 = data.get("z1"), data.get("z2")
 
     try:
-        # Definir variables si existen los límites
         variables = {}
         if x1 and x2: variables['x'] = symbols('x')
         if y1 and y2: variables['y'] = symbols('y')
@@ -22,7 +25,6 @@ def integral():
         pasos = []
         current_expr = expr
 
-        # Paso 1: Integrar respecto a z
         if 'z' in variables:
             paso = integrate(current_expr, (variables['z'], float(z1), float(z2)))
             pasos.append(
@@ -31,7 +33,6 @@ def integral():
             )
             current_expr = paso
 
-        # Paso 2: Integrar respecto a y
         if 'y' in variables:
             paso = integrate(current_expr, (variables['y'], float(y1), float(y2)))
             pasos.append(
@@ -40,7 +41,6 @@ def integral():
             )
             current_expr = paso
 
-        # Paso 3: Integrar respecto a x
         if 'x' in variables:
             paso = integrate(current_expr, (variables['x'], float(x1), float(x2)))
             pasos.append(
@@ -49,7 +49,6 @@ def integral():
             )
             current_expr = paso
 
-        # Respuesta final
         return jsonify({
             "resultado": str(current_expr),
             "latex": latex(current_expr),
@@ -61,8 +60,6 @@ def integral():
 
 if __name__ == "__main__":
     app.run(debug=True)
-
-
 
 
 
