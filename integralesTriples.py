@@ -32,7 +32,7 @@ def integral():
         if 'z' in variables:
             paso = integrate(current_expr, (variables['z'], float(z1), float(z2)))
             pasos.append(
-                f"\\textbf{{1. Integrando respecto a z:}} \\\\ "
+                f"\\textbf{{Integrando respecto a z:}} \\\\ "
                 f"$\\int_{{{z1}}}^{{{z2}}} {latex(current_expr)} \\, dz = {latex(paso)}$"
             )
             current_expr = paso
@@ -41,7 +41,7 @@ def integral():
         if 'y' in variables:
             paso = integrate(current_expr, (variables['y'], float(y1), float(y2)))
             pasos.append(
-                f"\\textbf{{2. Integrando respecto a y:}} \\\\ "
+                f"\\textbf{{Integrando respecto a y:}} \\\\ "
                 f"$\\int_{{{y1}}}^{{{y2}}} {latex(current_expr)} \\, dy = {latex(paso)}$"
             )
             current_expr = paso
@@ -50,7 +50,7 @@ def integral():
         if 'x' in variables:
             paso = integrate(current_expr, (variables['x'], float(x1), float(x2)))
             pasos.append(
-                f"\\textbf{{3. Integrando respecto a x:}} \\\\ "
+                f"\\textbf{{Integrando respecto a x:}} \\\\ "
                 f"$\\int_{{{x1}}}^{{{x2}}} {latex(current_expr)} \\, dx = {latex(paso)}$"
             )
             current_expr = paso
@@ -68,4 +68,5 @@ if __name__ == "__main__":
     # Render necesita host=0.0.0.0 y puerto dinámico
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
