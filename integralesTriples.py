@@ -16,7 +16,7 @@ def integral():
     limites = data.get("limites", {})   # ej: { "x":["0","2"], "y":["0","1"], "z":["0","r"] }
 
     try:
-        # Definir todas las variables posibles
+        # Variables simbólicas
         x, y, z, r, theta, phi, rho = symbols("x y z r theta phi rho")
         expr = sympify(expr_str)
 
@@ -38,17 +38,21 @@ def integral():
                 v = symbols(var)
                 a, b = limites[var]
                 paso_simb = integrate(current_expr, (v, sympify(a), sympify(b)))
-                paso_num = N(paso_simb)
-                
                 pasos.append(
                     f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
-                    f"$\\int_{{{a}}}^{{{b}}} {latex(current_expr)} \\, d{var} = {latex(paso_simb)} = {paso_num}$"
+                    f"$\\int_{{{a}}}^{{{b}}} {latex(current_expr)} \\, d{var} = {latex(paso_simb)}$"
                 )
                 current_expr = paso_simb
 
+        # Evaluar decimal: si quedan símbolos, usar evalf() en lugar de float()
+        if current_expr.free_symbols:
+            resultado_decimal = str(N(current_expr.evalf()))
+        else:
+            resultado_decimal = float(N(current_expr))
+
         return jsonify({
             "resultado": str(current_expr),
-            "resultado_decimal": float(N(current_expr)),
+            "resultado_decimal": resultado_decimal,
             "latex": latex(current_expr),
             "pasos": pasos
         })
