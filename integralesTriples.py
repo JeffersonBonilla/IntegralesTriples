@@ -7,35 +7,40 @@ app = Flask(__name__)
 @app.route("/integral", methods=["POST"])
 def integral():
     data = request.json
-    expr_str = data.get("expr","")
-    orden = data.get("orden",[])
-    limites = data.get("limites",{})
-    tipo = data.get("tipo","Cartesiana")  # nuevo
+    expr_str = data.get("expr", "")
+    orden = data.get("orden", [])
+    limites = data.get("limites", {})
+    tipo = data.get("tipo", "Cartesiana")  # Recibe el tipo de integral
 
     try:
-        x,y,z,r,theta,phi,rho = symbols("x y z r theta phi rho")
+        # Definir símbolos, eliminando rho y usando r para esféricas
+        x, y, z, r, theta, phi = symbols("x y z r theta phi")
         expr = sympify(expr_str)
-        pasos=[]
-        current=expr
+        pasos = []
+        current = expr
 
-        is_cil = tipo=="Cilíndrica"
-        is_esp = tipo=="Esférica"
+        is_cil = tipo == "Cilíndrica"
+        is_esp = tipo == "Esférica"
 
+        # Realizar la integración según el orden especificado
         for var in orden:
+            v = symbols(var)
             if var in limites:
-                v = symbols(var)
-                a,b = limites[var]
-
+                a, b = limites[var]
                 expr_aux = current
-                if is_cil and var=="r": expr_aux *= r
-                if is_esp and var=="rho": expr_aux *= rho**2 * sin(phi)
-
+                # Aplicar jacobiano según el tipo de integral
+                if is_cil and var == "r":
+                    expr_aux *= r
+                if is_esp and var == "r":
+                    expr_aux *= r**2 * sin(phi)  # Corregido de rho a r
                 paso = integrate(expr_aux, (v, sympify(a), sympify(b)))
                 pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ $\\int_{{{a}}}^{{{b}}} {latex(expr_aux)} \\, d{var} = {latex(paso)}$")
                 current = paso
 
-        try: resultado_decimal = float(N(current))
-        except: resultado_decimal = str(N(current))
+        try:
+            resultado_decimal = float(N(current))
+        except:
+            resultado_decimal = str(N(current))
 
         return jsonify({
             "resultado": str(current),
@@ -44,9 +49,8 @@ def integral():
             "pasos": pasos
         })
     except Exception as e:
-        return jsonify({"error":str(e)}),400
+        return jsonify({"error": str(e)}), 400
 
-if __name__=="__main__":
-    port = int(os.environ.get("PORT",5000))
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
