@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, sympify, N
+from sympy import symbols, integrate, latex, sympify, N, sin
 import os
 
 app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "API de Integrales Triples funcionando!"
+    return "API de Integrales Triples Universal funcionando!"
 
 @app.route("/integral", methods=["POST"])
 def integral():
@@ -16,9 +16,19 @@ def integral():
     limites = data.get("limites", {})   # ej: { "x":["0","2"], "y":["0","1"], "z":["0","r"] }
 
     try:
-        # Variables simbólicas
-        x, y, z, r, theta, phi = symbols("x y z r theta phi")
-        expr = sympify(expr_str)  # reconoce pi, sqrt(), theta, etc.
+        # Definir todas las variables posibles
+        x, y, z, r, theta, phi, rho = symbols("x y z r theta phi rho")
+        expr = sympify(expr_str)
+
+        # Detectar coordenadas y factor jacobiano
+        variables_set = set(orden)
+        factor = 1
+        if {"r", "theta", "z"} <= variables_set:
+            factor = r                  # cilíndricas
+        elif {"rho", "theta", "phi"} <= variables_set:
+            factor = rho**2 * sin(phi) # esféricas
+
+        expr = expr * factor
 
         pasos = []
         current_expr = expr
@@ -28,9 +38,8 @@ def integral():
                 v = symbols(var)
                 a, b = limites[var]
                 paso_simb = integrate(current_expr, (v, sympify(a), sympify(b)))
-                paso_num = N(paso_simb)  # evalúa numéricamente
+                paso_num = N(paso_simb)
                 
-                # Paso detallado con simbólico y decimal
                 pasos.append(
                     f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
                     f"$\\int_{{{a}}}^{{{b}}} {latex(current_expr)} \\, d{var} = {latex(paso_simb)} = {paso_num}$"
@@ -45,12 +54,10 @@ def integral():
         })
 
     except Exception as e:
-    print("ERROR en API:", e)
-    return jsonify({"error": str(e)}), 400
+        print("ERROR en API:", e)
+        return jsonify({"error": str(e)}), 400
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
-
 
