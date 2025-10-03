@@ -38,7 +38,7 @@ def integral():
         is_cil = tipo == "Cilíndrica"
         is_esp = tipo == "Esférica"
 
-        for var in reversed(orden):
+        for var in orden:
             v = symbols(var)
             if var in limites:
                 a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
@@ -72,5 +72,6 @@ def integral():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
