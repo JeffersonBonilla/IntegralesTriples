@@ -15,14 +15,12 @@ def limpiar_expr(expr):
     expr = expr.replace("\n", "")
     expr = expr.replace("$", "")
 
-    # Insertar multiplicaciones implícitas
     expr = re.sub(r'(\d)([A-Za-z\(])', r'\1*\2', expr)
     expr = re.sub(r'([A-Za-z\)])(\d|\()', r'\1*\2', expr)
 
     expr = expr.replace("^", "**")
     return expr.strip()
 
-# --- Ruta de integral ---
 @app.route("/integral", methods=["POST"])
 def integral():
     data = request.json
@@ -36,9 +34,11 @@ def integral():
         pasos = []
         current = expr
 
-        # --- SOLO CARTESIANA ---
         for var in orden:
-            v = symbols(var)
+            try:
+                v = symbols(var)
+            except:
+                continue 
             if var in limites:
                 a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
                 paso = integrate(current, (v, sympify(a), sympify(b)))
@@ -57,15 +57,12 @@ def integral():
             "latex": latex(current),
             "pasos": pasos
         })
-
     except Exception as e:
         return jsonify({"error": str(e)}), 400
-
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
 
 
 
