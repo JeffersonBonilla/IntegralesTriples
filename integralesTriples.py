@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, sympify, N, sin
+from sympy import symbols, integrate, latex, sympify, N
 import os
 import re
 
 app = Flask(__name__)
 
+# --- Limpiar expresión para SymPy ---
 def limpiar_expr(expr):
     if not expr:
         return "0"
@@ -14,20 +15,20 @@ def limpiar_expr(expr):
     expr = expr.replace("\n", "")
     expr = expr.replace("$", "")
 
+    # Insertar multiplicaciones implícitas
     expr = re.sub(r'(\d)([A-Za-z\(])', r'\1*\2', expr)
     expr = re.sub(r'([A-Za-z\)])(\d|\()', r'\1*\2', expr)
 
     expr = expr.replace("^", "**")
-
     return expr.strip()
 
+# --- Ruta de integral ---
 @app.route("/integral", methods=["POST"])
 def integral():
     data = request.json
     expr_str = limpiar_expr(data.get("expr", ""))
     orden = data.get("orden", [])
     limites = data.get("limites", {})
-    tipo = data.get("tipo", "Cartesiana")  # Cartesiana, Cilíndrica, Esferica
 
     try:
         x, y, z, r, theta, phi = symbols("x y z r theta phi")
@@ -35,17 +36,15 @@ def integral():
         pasos = []
         current = expr
 
-        is_cil = tipo == "Cilíndrica"
-        is_esp = tipo == "Esférica"
-
-    for var in orden:
-        v = symbols(var)
-        if var in limites:
-            a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
-            paso = integrate(current, (v, sympify(a), sympify(b)))
-            pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
-                         f"$\\int_{{{a}}}^{{{b}}} {latex(current)} \\, d{var} = {latex(paso)}$")
-            current = paso
+        # --- SOLO CARTESIANA ---
+        for var in orden:
+            v = symbols(var)
+            if var in limites:
+                a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
+                paso = integrate(current, (v, sympify(a), sympify(b)))
+                pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
+                             f"$\\int_{{{a}}}^{{{b}}} {latex(current)} \\, d{var} = {latex(paso)}$")
+                current = paso
 
         try:
             resultado_decimal = float(N(current))
