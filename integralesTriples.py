@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
 from sympy import symbols, integrate, latex, sympify, N, sin
 import os
+import re
 
 app = Flask(__name__)
 
-# Función para limpiar expresiones y límites
 def limpiar_expr(expr):
     if not expr:
         return "0"
@@ -13,8 +13,22 @@ def limpiar_expr(expr):
     expr = expr.replace("\\phi", "phi")
     expr = expr.replace("\n", "")
     expr = expr.replace("$", "")
-    expr = expr.replace(" ", "*")  # Opcional: convierte "2 y" a "2*y"
+
+    # Normalizaciones seguras:
+    # - convertir potencias tipo ^ a ** (si el usuario usa ^)
+    expr = re.sub(r'\^', '**', expr)
+
+    # - insertar multiplicación explícita SOLO donde haga falta:
+    #   entre número y variable:  "2x" -> "2*x"
+    expr = re.sub(r'(\d)([A-Za-z\(])', r'\1*\2', expr)
+    #   entre variable y número o paréntesis: "x2" -> "x*2", "x(" -> "x*("
+    expr = re.sub(r'([A-Za-z\)])(\d|\()', r'\1*\2', expr)
+    # NO hacer expr.replace(" ", "*") — eso rompe '**'
+
+    # Quitar espacios sobrantes
+    expr = expr.strip()
     return expr
+
 
 @app.route("/integral", methods=["POST"])
 def integral():
@@ -70,4 +84,5 @@ def integral():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
