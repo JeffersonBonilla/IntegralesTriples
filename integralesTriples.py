@@ -38,20 +38,14 @@ def integral():
         is_cil = tipo == "Cilíndrica"
         is_esp = tipo == "Esférica"
 
-        for var in orden:
-            v = symbols(var)
-            if var in limites:
-                a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
-                expr_aux = current
-                # Aplicar jacobiano según tipo
-                if is_cil and var == "r":
-                    expr_aux *= r
-                if is_esp and var == "r":
-                    expr_aux *= r**2 * sin(phi)
-                paso = integrate(expr_aux, (v, sympify(a), sympify(b)))
-                pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
-                             f"$\\int_{{{a}}}^{{{b}}} {latex(expr_aux)} \\, d{var} = {latex(paso)}$")
-                current = paso
+    for var in orden:
+        v = symbols(var)
+        if var in limites:
+            a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
+            paso = integrate(current, (v, sympify(a), sympify(b)))
+            pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
+                         f"$\\int_{{{a}}}^{{{b}}} {latex(current)} \\, d{var} = {latex(paso)}$")
+            current = paso
 
         try:
             resultado_decimal = float(N(current))
@@ -72,6 +66,7 @@ def integral():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
 
 
