@@ -14,11 +14,9 @@ def limpiar_expr(expr):
     expr = expr.replace("\n", "")
     expr = expr.replace("$", "")
 
-    # Multiplicaciones implícitas
     expr = re.sub(r'(\d)([A-Za-z\(])', r'\1*\2', expr)
     expr = re.sub(r'([A-Za-z\)])(\d|\()', r'\1*\2', expr)
 
-    # SOLO al final: potencias ^ -> **
     expr = expr.replace("^", "**")
 
     return expr.strip()
@@ -29,10 +27,9 @@ def integral():
     expr_str = limpiar_expr(data.get("expr", ""))
     orden = data.get("orden", [])
     limites = data.get("limites", {})
-    tipo = data.get("tipo", "Cartesiana")  # Cartesiana, Cilíndrica, Esférica
+    tipo = data.get("tipo", "Cartesiana")  # Cartesiana, Cilíndrica, Esferica
 
     try:
-        # Definir símbolos
         x, y, z, r, theta, phi = symbols("x y z r theta phi")
         expr = sympify(expr_str)
         pasos = []
@@ -41,8 +38,7 @@ def integral():
         is_cil = tipo == "Cilíndrica"
         is_esp = tipo == "Esférica"
 
-        # Integración según el orden
-        for var in orden:
+        for var in reversed(orden):
             v = symbols(var)
             if var in limites:
                 a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
@@ -52,7 +48,6 @@ def integral():
                     expr_aux *= r
                 if is_esp and var == "r":
                     expr_aux *= r**2 * sin(phi)
-                # Integrar
                 paso = integrate(expr_aux, (v, sympify(a), sympify(b)))
                 pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
                              f"$\\int_{{{a}}}^{{{b}}} {latex(expr_aux)} \\, d{var} = {latex(paso)}$")
@@ -77,6 +72,5 @@ def integral():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
-
 
 
