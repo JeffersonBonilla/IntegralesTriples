@@ -1,78 +1,64 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, sympify, N, sin
-import os
+from sympy import symbols, sympify, integrate, pi
 
 app = Flask(__name__)
 
-def limpiar_expr(expr):
-    if not expr:
-        return "0"
-    expr = expr.replace("π", "pi")
-    expr = expr.replace("\\theta", "theta")
-    expr = expr.replace("\\phi", "phi")
-    expr = expr.replace("\n", "")
-    expr = expr.replace("$", "")
-    expr = expr.replace(" ", "*")  # convierte "2 y" en "2*y"
-    return expr
-
 @app.route("/integral", methods=["POST"])
-def integral():
-    data = request.json
-    expr_str = limpiar_expr(data.get("expr", ""))
-    orden = data.get("orden", [])
-    limites = data.get("limites", {})
-    tipo = data.get("tipo", "Cartesiana")
-
+def calcular_integral():
     try:
-        x, y, z, r, theta, phi = symbols("x y z r theta phi")
-        expr = sympify(expr_str)
-        pasos = []
-        current = expr
+        data = request.json
 
-        is_cil = tipo == "Cilíndrica"
-        is_esp = tipo == "Esférica"
+        # Datos recibidos
+        funcion = data.get("funcion", "")
+        orden = data.get("orden", "")
+        x1 = sympify(data.get("x1", "0"))
+        x2 = sympify(data.get("x2", "0"))
+        y1 = sympify(data.get("y1", "0"))
+        y2 = sympify(data.get("y2", "0"))
+        z1 = data.get("z1", None)
+        z2 = data.get("z2", None)
 
-        for i, var_name in enumerate(orden, start=1):
-            v = symbols(var_name)
-            if var_name not in limites:
-                return jsonify({"error": f"No hay límites para {var_name}"}), 400
-            a, b = sympify(limites[var_name][0]), sympify(limites[var_name][1])
+        # Variables
+        x, y, z, r, theta, phi = symbols('x y z r theta phi')
 
-            integrando = current
-            # Aplicar jacobiano
-            if is_cil and var_name == "r":
-                integrando *= r
-            if is_esp and var_name == "r":
-                integrando *= r**2 * sin(phi)
+        # Reemplazar caracteres especiales
+        funcion = funcion.replace("π", "pi")
+        funcion = funcion.replace("θ", "theta")
+        funcion = funcion.replace("φ", "phi")
+        funcion = funcion.replace("√", "sqrt")
 
-            paso_simbolico = integrate(integrando, (v, a, b))
-            # Evaluar límites para mostrar paso a paso
-            paso_evaluado = paso_simbolico
+        expr = sympify(funcion)
 
-            pasos.append(f"\\textbf{{Paso {i}: Integrando respecto a {var_name}}} \\\\ "
-                         f"$$\\int_{{{latex(a)}}}^{{{latex(b)}}} {latex(integrando)} \\, d{var_name} = {latex(paso_simbolico)}$$ \\\\ "
-                         f"Evaluando los límites: {latex(paso_evaluado)}")
+        # Integración
+        if z1 is not None and z2 is not None:  # Integral triple
+            z1 = sympify(z1)
+            z2 = sympify(z2)
+            # Orden de integración según string
+            if orden == "dzdydx":
+                integral = integrate(expr, (z, z1, z2), (y, y1, y2), (x, x1, x2))
+            elif orden == "dzdxdy":
+                integral = integrate(expr, (z, z1, z2), (x, x1, x2), (y, y1, y2))
+            else:
+                return jsonify({"error": "Orden no soportado"}), 400
+        else:  # Integral doble
+            if orden == "dydx":
+                integral = integrate(expr, (y, y1, y2), (x, x1, x2))
+            elif orden == "dxdy":
+                integral = integrate(expr, (x, x1, x2), (y, y1, y2))
+            else:
+                return jsonify({"error": "Orden no soportado"}), 400
 
-            current = paso_evaluado
-
-        try:
-            resultado_decimal = float(N(current))
-        except:
-            resultado_decimal = str(N(current))
-
+        # Respuesta
         return jsonify({
-            "resultado": str(current),
-            "resultado_decimal": resultado_decimal,
-            "latex": latex(current),
-            "pasos": pasos
+            "resultado": str(integral.evalf()),
+            "latex": str(integral)
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True)
 
 
 
