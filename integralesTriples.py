@@ -1,10 +1,8 @@
 from flask import Flask, request, jsonify
 from sympy import symbols, integrate, latex, sympify, N, sin
-import os
 
 app = Flask(__name__)
 
-# Función para limpiar expresiones y límites
 def limpiar_expr(expr):
     if not expr:
         return "0"
@@ -13,7 +11,6 @@ def limpiar_expr(expr):
     expr = expr.replace("\\phi", "phi")
     expr = expr.replace("\n", "")
     expr = expr.replace("$", "")
-    expr = expr.replace(" ", "*")  # Opcional: convierte "2 y" a "2*y"
     return expr
 
 @app.route("/integral", methods=["POST"])
@@ -22,10 +19,10 @@ def integral():
     expr_str = limpiar_expr(data.get("expr", ""))
     orden = data.get("orden", [])
     limites = data.get("limites", {})
-    tipo = data.get("tipo", "Cartesiana")  # Cartesiana, Cilíndrica, Esférica
+    tipo = data.get("tipo", "Cartesiana")
 
     try:
-        # Definir símbolos
+        # símbolos
         x, y, z, r, theta, phi = symbols("x y z r theta phi")
         expr = sympify(expr_str)
         pasos = []
@@ -34,45 +31,45 @@ def integral():
         is_cil = tipo == "Cilíndrica"
         is_esp = tipo == "Esférica"
 
-        # Integración según el orden
         for var in orden:
             v = symbols(var)
             if var in limites:
                 a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
                 expr_aux = current
 
-                # Aplicar jacobiano según tipo
+                # Jacobiano
                 if is_cil and var == "r":
                     expr_aux *= r
                 if is_esp and var == "r":
                     expr_aux *= r**2 * sin(phi)
 
-                # Integrar
-                paso = integrate(expr_aux, (v, sympify(a), sympify(b)))
+                # integral indefinida primero
+                indef = integrate(expr_aux, v)
+                # eval en límites
+                eval_ab = indef.subs(v, sympify(b)) - indef.subs(v, sympify(a))
+                paso = eval_ab
 
-                # Guardar paso en formato LaTeX limpio
-                paso_latex = f"\\int_{{{latex(sympify(a))}}}^{{{latex(sympify(b))}}} {latex(expr_aux)} \\, d{latex(v)} = {latex(paso)}"
-                pasos.append(paso_latex)
+                pasos.append(
+                    f"Paso {len(pasos)+1}: ∫ {latex(expr_aux)} d{var} = {latex(indef)}"
+                )
+                pasos.append(
+                    f"Evaluando en [{a}, {b}]: {latex(indef.subs(v, sympify(b)))} - {latex(indef.subs(v, sympify(a)))} = {latex(eval_ab)}"
+                )
 
-                # Actualizar "current"
                 current = paso
 
-        try:
-            resultado_decimal = float(N(current))
-        except:
-            resultado_decimal = str(N(current))
-
         return jsonify({
-            "resultado": latex(current),            # <-- siempre LaTeX
-            "resultado_decimal": resultado_decimal,
-            "pasos": pasos                          # <-- lista de pasos en LaTeX limpio
+            "resultado": str(current),
+            "resultado_decimal": float(N(current)),
+            "latex": latex(current),
+            "pasos": pasos
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
+
 
