@@ -1,9 +1,8 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, sympify, N, sin, pi
-import os
+from sympy import symbols, integrate, latex, sympify, N, sin
+
 app = Flask(__name__)
 
-# Limpiar expresión para SymPy
 def limpiar_expr(expr):
     if not expr:
         return "0"
@@ -12,6 +11,7 @@ def limpiar_expr(expr):
     expr = expr.replace("\\phi", "phi")
     expr = expr.replace("\n", "")
     expr = expr.replace("$", "")
+    expr = expr.replace(" ", "*")  # Convierte "2 y" a "2*y"
     return expr
 
 @app.route("/integral", methods=["POST"])
@@ -31,28 +31,27 @@ def integral():
         is_cil = tipo == "Cilíndrica"
         is_esp = tipo == "Esférica"
 
-        for var_name in orden:
-            v = symbols(var_name)
-            if var_name not in limites:
-                return jsonify({"error": f"Variable {var_name} no tiene límites"}), 400
+        for idx, var in enumerate(orden, start=1):
+            v = symbols(var)
+            if var in limites:
+                a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
+                expr_aux = current
+                # Aplicar jacobiano
+                if is_cil and var == "r":
+                    expr_aux *= r
+                if is_esp and var == "r":
+                    expr_aux *= r**2 * sin(phi)
 
-            a_str, b_str = limpiar_expr(limites[var_name][0]), limpiar_expr(limites[var_name][1])
-            a, b = sympify(a_str), sympify(b_str)
+                # Antiderivada
+                primitiva = integrate(expr_aux, v)
 
-            # Expresión con jacobiano
-            expr_aux = current
-            if is_cil and var_name == "r":
-                expr_aux *= r
-            if is_esp and var_name == "r":
-                expr_aux *= r**2 * sin(phi)
+                # Evaluación de límites
+                evaluacion = primitiva.subs(v, sympify(b)) - primitiva.subs(v, sympify(a))
+                pasos.append(f"\\textbf{{Paso {idx}: Integrando respecto a {var}}} \\\\"
+                             f"$$\\int_{{{a}}}^{{{b}}} {latex(expr_aux)} \\, d{var} = {latex(primitiva)}$$ \\\\"
+                             f"Evaluando los límites: $$ {latex(primitiva.subs(v, sympify(b)))} - {latex(primitiva.subs(v, sympify(a)))} = {latex(evaluacion)} $$")
 
-            # Integrar
-            integral_intermedia = integrate(expr_aux, (v, a, b))
-            paso_latex = (
-                f"\\int_{{{latex(a)}}}^{{{latex(b)}}} {latex(expr_aux)} \\, d{var_name} = {latex(integral_intermedia)}"
-            )
-            pasos.append(paso_latex)
-            current = integral_intermedia
+                current = evaluacion
 
         try:
             resultado_decimal = float(N(current))
@@ -60,7 +59,7 @@ def integral():
             resultado_decimal = str(N(current))
 
         return jsonify({
-            "resultado": latex(current),       # Para mostrar simbólico
+            "resultado": str(current),
             "resultado_decimal": resultado_decimal,
             "pasos": pasos
         })
@@ -69,8 +68,8 @@ def integral():
         return jsonify({"error": str(e)}), 400
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=5000, debug=True)
+
 
 
 
