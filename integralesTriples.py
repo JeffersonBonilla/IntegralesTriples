@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from sympy import symbols, integrate, latex, sympify, N, sin
+import os
 
 app = Flask(__name__)
 
