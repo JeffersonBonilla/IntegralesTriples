@@ -40,15 +40,21 @@ def integral():
             if var in limites:
                 a, b = limpiar_expr(limites[var][0]), limpiar_expr(limites[var][1])
                 expr_aux = current
+
                 # Aplicar jacobiano según tipo
                 if is_cil and var == "r":
                     expr_aux *= r
                 if is_esp and var == "r":
                     expr_aux *= r**2 * sin(phi)
+
                 # Integrar
                 paso = integrate(expr_aux, (v, sympify(a), sympify(b)))
-                pasos.append(f"\\textbf{{Integrando respecto a {var}:}} \\\\ "
-                             f"$\\int_{{{a}}}^{{{b}}} {latex(expr_aux)} \\, d{var} = {latex(paso)}$")
+
+                # Guardar paso en formato LaTeX limpio
+                paso_latex = f"\\int_{{{latex(sympify(a))}}}^{{{latex(sympify(b))}}} {latex(expr_aux)} \\, d{latex(v)} = {latex(paso)}"
+                pasos.append(paso_latex)
+
+                # Actualizar "current"
                 current = paso
 
         try:
@@ -57,10 +63,9 @@ def integral():
             resultado_decimal = str(N(current))
 
         return jsonify({
-            "resultado": str(current),
+            "resultado": latex(current),            # <-- siempre LaTeX
             "resultado_decimal": resultado_decimal,
-            "latex": latex(current),
-            "pasos": pasos
+            "pasos": pasos                          # <-- lista de pasos en LaTeX limpio
         })
 
     except Exception as e:
