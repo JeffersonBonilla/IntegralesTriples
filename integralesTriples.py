@@ -1,68 +1,68 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, sympify, integrate, latex
-import traceback
+import sympy as sp
+from sympy import integrate, symbols, latex
 
 app = Flask(__name__)
 
-@app.route("/integral", methods=["POST"])
+@app.route('/integral', methods=['POST'])
 def calcular_integral():
-    data = request.json or {}
-    debug_info = {"recibido": data, "error": None}
-
     try:
-        # Función
-        funcion = str(data.get("funcion", "")).replace("π", "pi").replace("√", "sqrt").strip()
-        orden = str(data.get("orden", "")).strip()
+        data = request.json
+        function_str = data['function']  # e.g., "x*y"
+        x1, x2 = data['x1'], data['x2']  # strings, e.g., "0", "1"
+        y1, y2 = data['y1'], data['y2']
+        z1, z2 = data['z1'], data['z2']  # Ignored if not triple
+        order = data['order'].lower()    # e.g., "dydx" or "dzdydx"
+        is_triple = data['is_triple']
 
+        # Define symbols
         x, y, z = symbols('x y z')
 
-        # Limites seguros
-        def safe_sympify(value, default=0):
-            if value is None or value == "":
-                return default
-            return sympify(str(value).replace(",", ".").strip())
+        # Parse function
+        f = sp.sympify(function_str)
 
-        x1 = safe_sympify(data.get("x1"))
-        x2 = safe_sympify(data.get("x2"))
-        y1 = safe_sympify(data.get("y1"))
-        y2 = safe_sympify(data.get("y2"))
-        z1 = safe_sympify(data.get("z1")) if "z1" in data else None
-        z2 = safe_sympify(data.get("z2")) if "z2" in data else None
+        steps = []
+        result = None
 
-        expr = sympify(funcion)
-
-        pasos = []
-
-        # Integral doble
-        if z1 is None or z2 is None:
-            pasos.append(latex(integrate(expr, (y, y1, y2), (x, x1, x2), evaluate=False)))
-            int_y = integrate(expr, (y, y1, y2), evaluate=False)
-            pasos.append(latex(int_y))
-            int_y_eval = integrate(expr, (y, y1, y2))
-            pasos.append(latex(int_y_eval))
-            resultado = int_y_eval.evalf()
+        if not is_triple:
+            # Double integral
+            if order == "dydx":
+                inner = integrate(f, (y, sp.sympify(y1), sp.sympify(y2)))
+                steps.append(latex(sp.Integral(f, (y, y1, y2))) + " (inner)")
+                final = integrate(inner, (x, sp.sympify(x1), sp.sympify(x2)))
+                steps.append(latex(inner) + " (after dy)")
+                result = latex(final)
+            elif order == "dxdy":
+                inner = integrate(f, (x, sp.sympify(x1), sp.sympify(x2)))
+                steps.append(latex(sp.Integral(f, (x, x1, x2))) + " (inner)")
+                final = integrate(inner, (y, sp.sympify(y1), sp.sympify(y2)))
+                steps.append(latex(inner) + " (after dx)")
+                result = latex(final)
+            else:
+                return jsonify({"error": "Orden no soportada para doble (usa dydx o dxdy)"}), 400
         else:
-            # Integral triple
-            pasos.append(latex(integrate(expr, (z, z1, z2), (y, y1, y2), (x, x1, x2), evaluate=False)))
-            int_z = integrate(expr, (z, z1, z2), evaluate=False)
-            pasos.append(latex(int_z))
-            int_zy = integrate(int_z, (y, y1, y2), evaluate=False)
-            pasos.append(latex(int_zy))
-            int_zyx = integrate(int_zy, (x, x1, x2))
-            pasos.append(latex(int_zyx))
-            resultado = int_zyx.evalf()
+            # Triple integral (extend for more orders)
+            if order == "dzdydx":
+                inner_z = integrate(f, (z, sp.sympify(z1), sp.sympify(z2)))
+                steps.append(latex(sp.Integral(f, (z, z1, z2))) + " (inner dz)")
+                inner_y = integrate(inner_z, (y, sp.sympify(y1), sp.sympify(y2)))
+                steps.append(latex(inner_z) + " (after dz), then " + latex(sp.Integral(inner_z, (y, y1, y2))))
+                final = integrate(inner_y, (x, sp.sympify(x1), sp.sympify(x2)))
+                steps.append(latex(inner_y) + " (after dy)")
+                result = latex(final)
+            # Add more orders like "dxdydz" as needed
+            else:
+                return jsonify({"error": "Orden no soportada para triple (usa dzdydx)"}), 400
 
-        debug_info["resultado"] = str(resultado)
-        debug_info["pasos"] = pasos
+        steps.append("Resultado: " + result)  # Last step is result
 
-        return jsonify(debug_info)
+        return jsonify({
+            "steps": steps,
+            "result": result
+        })
 
     except Exception as e:
-        debug_info["error"] = traceback.format_exc()
-        return jsonify(debug_info), 400
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
-
-
-
+if __name__ == '__main__':
+    app.run(debug=True)
