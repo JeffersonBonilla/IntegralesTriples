@@ -18,10 +18,14 @@ def generar_explicacion(f, var):
         return f"Antiderivada simbólica de $$ {latex(f)} $$ respecto a {simbolo(var.name)}."
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
-    """Genera paso mostrando antiderivada indefinida y resultado de integral definida"""
+    """Genera paso mostrando antiderivada indefinida y resultado de integral definida
+       Maneja constantes respecto a la variable de integración para evitar errores."""
     try:
-        # Antiderivada indefinida
-        F_indef = integrate(f, var)
+        # Separar parte constante y parte que depende de var
+        f_const, f_var = f.as_independent(var, as_Add=False)
+        
+        # Antiderivada indefinida segura
+        F_indef = integrate(f_var, var) * f_const
 
         # Integral definida directa (maneja constantes automáticamente)
         resultado = integrate(f, (var, lower, upper))
@@ -38,6 +42,7 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         return html, resultado
     except Exception as e:
         return f"<p>Error en integración: {str(e)}</p>", f
+
 
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
@@ -131,4 +136,5 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
