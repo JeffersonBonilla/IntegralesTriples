@@ -4,23 +4,24 @@ import sympy as sp
 
 app = Flask(__name__)
 
-def generar_explicacion(f, var):
-    """Explicación textual simple para la integral."""
+def generar_explicacion(f, var, var_latex):
+    """Explicación textual simple para la integral, con símbolos LaTeX."""
+    var_name = var.name
     if f.is_constant(var):  # Constante respecto a var
-        return f"Esta es una constante respecto a {var.name}. La integral es {latex(f)} \\cdot {var.name} + C."
+        return f"Esta es una constante respecto a {var_latex}. La integral es {latex(f)} \\cdot {var_latex} + C."
     elif degree(f, var) > 0:  # Polinomio
         # Escapar llaves correctamente para LaTeX en f-string
-        return f"Usa la regla de potencia para cada término: \\\\int {var.name}^n d{var.name} = \\\\frac{{ {var.name}^{{n+1}} }}{{n+1}} + C."
+        return f"Usa la regla de potencia para cada término: \\\\int {var_latex}^n d{var_latex} = \\\\frac{{ {var_latex}^{{n+1}} }}{{n+1}} + C."
     elif f.has(sp.sin) or f.has(sp.cos):
-        return "Usa reglas de integración trigonométrica (ej. \\\\int \\\\sin u du = -\\\\cos u + C)."
+        return f"Usa reglas de integración trigonométrica (ej. \\\\int \\\\sin u du = -\\\\cos u + C)."
     else:
-        return f"Antiderivada simbólica de {latex(f)} respecto a {var.name}."
+        return f"Antiderivada simbólica de {latex(f)} respecto a {var_latex}."
 
-def generar_paso_integral(f, var, lower, upper, paso_num):
-    """Genera HTML detallado para un paso de integración."""
+def generar_paso_integral(f, var, lower, upper, paso_num, var_latex):
+    """Genera HTML detallado para un paso de integración, con símbolos LaTeX."""
     try:
         F = integrate(f, var)  # Antiderivada indefinida
-        explicacion = generar_explicacion(f, var)
+        explicacion = generar_explicacion(f, var, var_latex)
         
         F_upper = F.subs(var, upper)
         F_lower = F.subs(var, lower)
@@ -28,8 +29,8 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         
         html = f"""
         <div style="margin-bottom: 20px; padding: 15px; background: #1A1A1A; border-left: 3px solid #4CAF50; border-radius: 5px;">
-            <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{var}$$</p>
-            <p><strong>Subpaso {paso_num}b:</strong> {explicacion} La antiderivada indefinida es $$\\int {latex(f)} \\, d{var} = {latex(F)} + C$$.</p>
+            <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{var_latex}$$</p>
+            <p><strong>Subpaso {paso_num}b:</strong> {explicacion} La antiderivada indefinida es $$\\int {latex(f)} \\, d{var_latex} = {latex(F)} + C$$.</p>
             <p><strong>Subpaso {paso_num}c:</strong> Evaluación en límites: $$[{latex(F)}]_{{{latex(lower)}}}^{{{latex(upper)}}} = {latex(F_upper)} - {latex(F_lower)} = {latex(resultado)}$$</p>
             <p><strong>Subpaso {paso_num}d:</strong> Resultado simplificado: $$ {latex(resultado)} $$</p>
         </div>
@@ -57,6 +58,16 @@ def calcular_integral():
         # Símbolos para coordenadas cartesianas/polares/esféricas
         x, y, z, r, theta, phi = symbols('x y z r theta phi')
         locals_dict = {'x': x, 'y': y, 'z': z, 'r': r, 'theta': theta, 'phi': phi, 'pi': pi, 'sqrt': sqrt}
+
+        # Mapeo para LaTeX de variables (para renderizar símbolos)
+        var_latex_map = {
+            'x': 'x',
+            'y': 'y',
+            'z': 'z',
+            'r': 'r',
+            'theta': '\\theta',
+            'phi': '\\phi'
+        }
 
         # Parsear función
         f = sp.sympify(function_str, locals=locals_dict)
@@ -94,25 +105,25 @@ def calcular_integral():
             except SympifyError:
                 raise ValueError(f"Límite inválido para {varname}: '{low_str}' o '{up_str}'. Usa expresiones como 'pi/2' o 'theta'.")
 
-        # Generar LaTeX de la integral original (orden externa a interna para notación estándar)
-        # Invertir orden_vars para mostrar externa primero
-        orden_display = orden_vars[::-1]  # Reverso: externa a interna
-        integrals = []
-        for varname in orden_display:
-            var = locals_dict[varname]
+        # Generar LaTeX de la integral original (limpia: externa a interna, sin vacíos)
+        # orden_display: externa a interna para límites
+        orden_display = orden_vars[::-1]  # Reverso para display (externa primero)
+        integrals_parts = []
+        for i, varname in enumerate(orden_display):
+            var_latex = var_latex_map[varname]
             lower, upper = limites_parsed[varname]
-            integrals.append(f"\\int_{{{latex(lower)}}}^{{{latex(upper)}}}")
-        integral_latex = " ".join(integrals) + f" {{latex(f)}} \\, " + " \\, ".join([f"d{varname}" for varname in orden_display])
-        tipo_integral = "\\iiint" if is_triple else "\\iint"
-        integral_original = f"{tipo_integral} {integral_latex}"
+            integrals_parts.append(f"\\int_{{{var_latex} = {latex(lower)}}}^{{{latex(upper)}}}}")
+        # Función y diferenciales (diferenciales: interna a externa, que es orden_vars)
+        diff_parts = [f"d{var_latex_map[v]}" for v in orden_vars]
+        integral_latex = " ".join(integrals_parts) + f" {latex(f)} \\, " + " \\, ".join(diff_parts)
 
-        # Sección "Ejercicio Propuesto" como HTML destacado
+        # Sección "Ejercicio Propuesto" como HTML destacado (sin \iiint extra)
         tipo = "triple" if is_triple else "doble"
         ejercicio_html = f"""
         <div style="text-align: center; background: #2A2A2A; padding: 20px; margin-bottom: 30px; border-radius: 10px; border: 2px solid #4CAF50;">
             <h3 style="color: #4CAF50; margin-bottom: 10px;">Ejercicio Propuesto</h3>
             <p style="margin-bottom: 15px; font-size: 16px;">Resuelve la siguiente integral {tipo}:</p>
-            <div class="math">$$ {integral_original} $$</div>
+            <div class="math">$$ {integral_latex} $$</div>
         </div>
         """
 
@@ -120,12 +131,13 @@ def calcular_integral():
         result = f
         paso = 1
 
-        # Agregar pasos de integración
+        # Agregar pasos de integración (con símbolos LaTeX)
         for varname in orden_vars:
             var = locals_dict[varname]
             lower, upper = limites_parsed[varname]
-            html, result = generar_paso_integral(result, var, lower, upper, paso)
-            steps.append(f"<p><strong>Paso {paso} (integración respecto a {varname}):</strong></p>" + html)
+            var_latex = var_latex_map[varname]
+            html, result = generar_paso_integral(result, var, lower, upper, paso, var_latex)
+            steps.append(f"<p><strong>Paso {paso} (integración respecto a {var_latex}):</strong></p>" + html)
             paso += 1
 
         steps_html = "<h2>Desglose Detallado Paso a Paso</h2>" + "".join(steps)
@@ -141,4 +153,3 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
