@@ -73,7 +73,7 @@ def calcular_integral():
         if len(orden_vars) != expected_vars:
             raise ValueError(f"Orden inválido: espera {expected_vars} variables para {'triple' if is_triple else 'doble'} integral. Encontradas: {orden_vars}")
 
-        # Asignar límites
+        # Asignar límites según variable
         var_to_limites = {
             'x': (x1_str, x2_str),
             'theta': (x1_str, x2_str),
@@ -90,7 +90,7 @@ def calcular_integral():
             upper = sp.sympify(up_str, locals=locals_dict)
             limites_parsed[varname] = (lower, upper)
 
-        # Integral original en LaTeX (sin integrales vacías)
+        # Crear integral simbólica para mostrar (orden invertido para integraciones)
         orden_display = orden_vars[::-1]
         integrals = []
         for varname in orden_display:
@@ -100,6 +100,9 @@ def calcular_integral():
         tipo_integral = "\\iiint" if is_triple else "\\iint"
         integral_original = f"{tipo_integral} {integral_latex}"
 
+        # Orden de integración mostrado igual que el usuario lo ingresó
+        orden_ingresado_render = " ".join([f"d{simbolo(v)}" for v in orden_vars])
+
         # Ejercicio propuesto
         tipo = "triple" if is_triple else "doble"
         ejercicio_html = f"""
@@ -107,14 +110,15 @@ def calcular_integral():
             <h3 style="color: #4CAF50; margin-bottom: 10px;">Ejercicio Propuesto</h3>
             <p style="margin-bottom: 15px; font-size: 16px;">Resuelve la siguiente integral {tipo}:</p>
             <div class="math">$$ {integral_original} $$</div>
+            <p style="color: #AAAAAA; margin-top: 10px;">Orden de integración: $$ {orden_ingresado_render} $$</p>
         </div>
         """
 
+        # Secuencia de pasos
         steps = [ejercicio_html]
         result = f
         paso = 1
 
-        # Pasos detallados
         for varname in orden_vars:
             var = locals_dict[varname]
             lower, upper = limites_parsed[varname]
