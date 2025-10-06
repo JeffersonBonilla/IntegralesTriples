@@ -9,9 +9,10 @@ def generar_explicacion(f, var):
     if f.is_constant(var):  # Constante respecto a var
         return f"Esta es una constante respecto a {var.name}. La integral es {latex(f)} \\cdot {var.name} + C."
     elif degree(f, var) > 0:  # Polinomio
-        return f"Usa la regla de potencia para cada término: \\int {var.name}^n d{var.name} = \\frac{{{var.name}}^{{n+1}}}{{n+1}} + C."
+        # Escapar llaves correctamente para LaTeX en f-string
+        return f"Usa la regla de potencia para cada término: \\\\int {var.name}^n d{var.name} = \\\\frac{{ {var.name}^{{n+1}} }}{{n+1}} + C."
     elif f.has(sp.sin) or f.has(sp.cos):
-        return "Usa reglas de integración trigonométrica (ej. \\int \\sin u du = -\\cos u + C)."
+        return "Usa reglas de integración trigonométrica (ej. \\\\int \\\\sin u du = -\\\\cos u + C)."
     else:
         return f"Antiderivada simbólica de {latex(f)} respecto a {var.name}."
 
@@ -101,11 +102,9 @@ def calcular_integral():
             var = locals_dict[varname]
             lower, upper = limites_parsed[varname]
             integrals.append(f"\\int_{{{latex(lower)}}}^{{{latex(upper)}}}")
-        integral_latex = " ".join(integrals) + f" {latex(f)} \\, " + " \\, ".join([f"d{v}" for v in orden_vars[::-1]])  # Diferenciales en orden interna a externa? No, en notación es externa a interna, pero ajusto
-        # Corrección: Diferenciales siguen el orden original (interna primero en escritura, pero visual externa primero)
-        # Para simplicidad: Usar expandida
+        integral_latex = " ".join(integrals) + f" {{latex(f)}} \\, " + " \\, ".join([f"d{varname}" for varname in orden_display])
         tipo_integral = "\\iiint" if is_triple else "\\iint"
-        integral_original = f"{tipo_integral} " + integral_latex
+        integral_original = f"{tipo_integral} {integral_latex}"
 
         # Sección "Ejercicio Propuesto" como HTML destacado
         tipo = "triple" if is_triple else "doble"
@@ -121,7 +120,7 @@ def calcular_integral():
         result = f
         paso = 1
 
-        # Agregar pasos de integración (sin el "integral original" anterior)
+        # Agregar pasos de integración
         for varname in orden_vars:
             var = locals_dict[varname]
             lower, upper = limites_parsed[varname]
@@ -142,3 +141,4 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
