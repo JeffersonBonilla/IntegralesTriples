@@ -8,14 +8,14 @@ def generar_explicacion(f, var, var_latex):
     """Explicación textual simple para la integral, con símbolos LaTeX."""
     var_name = var.name
     if f.is_constant(var):  # Constante respecto a var
-        return f"Esta es una constante respecto a {var_latex}. La integral es {latex(f)} \\cdot {var_latex} + C."
+        return "Esta es una constante respecto a {}. La integral es {} \\cdot {} + C.".format(var_latex, latex(f), var_latex)
     elif degree(f, var) > 0:  # Polinomio
-        # Escapar llaves correctamente para LaTeX en f-string
-        return f"Usa la regla de potencia para cada término: \\\\int {var_latex}^n d{var_latex} = \\\\frac{{ {var_latex}^{{n+1}} }}{{n+1}} + C."
+        # Usar .format() para evitar issues con llaves en LaTeX
+        return "Usa la regla de potencia para cada término: \\\\int {} ^n d{} = \\\\frac{{ {}^{{n+1}} }}{{n+1}} + C.".format(var_latex, var_latex, var_latex)
     elif f.has(sp.sin) or f.has(sp.cos):
-        return f"Usa reglas de integración trigonométrica (ej. \\\\int \\\\sin u du = -\\\\cos u + C)."
+        return "Usa reglas de integración trigonométrica (ej. \\\\int \\\\sin u du = -\\\\cos u + C)."
     else:
-        return f"Antiderivada simbólica de {latex(f)} respecto a {var_latex}."
+        return "Antiderivada simbólica de {} respecto a {}.".format(latex(f), var_latex)
 
 def generar_paso_integral(f, var, lower, upper, paso_num, var_latex):
     """Genera HTML detallado para un paso de integración, con símbolos LaTeX."""
@@ -27,17 +27,23 @@ def generar_paso_integral(f, var, lower, upper, paso_num, var_latex):
         F_lower = F.subs(var, lower)
         resultado = sp.simplify(F_upper - F_lower)
         
-        html = f"""
+        # Usar .format() para el HTML complejo y evitar f-string issues
+        html = """
         <div style="margin-bottom: 20px; padding: 15px; background: #1A1A1A; border-left: 3px solid #4CAF50; border-radius: 5px;">
-            <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{var_latex}$$</p>
-            <p><strong>Subpaso {paso_num}b:</strong> {explicacion} La antiderivada indefinida es $$\\int {latex(f)} \\, d{var_latex} = {latex(F)} + C$$.</p>
-            <p><strong>Subpaso {paso_num}c:</strong> Evaluación en límites: $$[{latex(F)}]_{{{latex(lower)}}}^{{{latex(upper)}}} = {latex(F_upper)} - {latex(F_lower)} = {latex(resultado)}$$</p>
-            <p><strong>Subpaso {paso_num}d:</strong> Resultado simplificado: $$ {latex(resultado)} $$</p>
+            <p><strong>Subpaso {}a:</strong> La integral definida es $$\\int_{{{}}}^{{{}}} {} \\, d{}$$</p>
+            <p><strong>Subpaso {}b:</strong> {} La antiderivada indefinida es $$\\int {} \\, d{} = {} + C$$.</p>
+            <p><strong>Subpaso {}c:</strong> Evaluación en límites: $$[{}]_{{{}}}^{{{}}} = {} - {} = {}$$</p>
+            <p><strong>Subpaso {}d:</strong> Resultado simplificado: $$ {} $$</p>
         </div>
-        """
+        """.format(
+            paso_num, latex(lower), latex(upper), latex(f), var_latex,
+            paso_num, explicacion, latex(f), var_latex, latex(F),
+            paso_num, latex(F), latex(lower), latex(upper), latex(F_upper), latex(F_lower), latex(resultado),
+            paso_num, latex(resultado)
+        )
         return html, resultado
     except Exception as e:
-        return f"<p>Error en integración: {str(e)}</p>", f  # Fallback
+        return "<p>Error en integración: {}</p>".format(str(e)), f  # Fallback
 
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
@@ -80,7 +86,7 @@ def calcular_integral():
         # Validar número de vars basado en is_triple
         expected_vars = 3 if is_triple else 2
         if len(orden_vars) != expected_vars:
-            raise ValueError(f"Orden inválido: espera {expected_vars} variables para {'triple' if is_triple else 'doble'} (ej. 'dzdydx' o 'dydx'). Encontradas: {orden_vars}")
+            raise ValueError("Orden inválido: espera {} variables para {} (ej. 'dzdydx' o 'dydx'). Encontradas: {}".format(expected_vars, 'triple' if is_triple else 'doble', orden_vars))
 
         # Mapeo de var a límites (basado en hints XML: X= x/θ, Y= y/r, Z= z/φ)
         var_to_limites = {
@@ -96,36 +102,38 @@ def calcular_integral():
         limites_parsed = {}
         for varname in orden_vars:
             if varname not in var_to_limites:
-                raise ValueError(f"Variable no soportada en orden: {varname}. Usa x,y,z,r,theta,phi.")
+                raise ValueError("Variable no soportada en orden: {}. Usa x,y,z,r,theta,phi.".format(varname))
             low_str, up_str = var_to_limites[varname]
             try:
                 lower = sp.sympify(low_str, locals=locals_dict)
                 upper = sp.sympify(up_str, locals=locals_dict)
                 limites_parsed[varname] = (lower, upper)
             except SympifyError:
-                raise ValueError(f"Límite inválido para {varname}: '{low_str}' o '{up_str}'. Usa expresiones como 'pi/2' o 'theta'.")
+                raise ValueError("Límite inválido para {}: '{}' o '{}'. Usa expresiones como 'pi/2' o 'theta'.".format(varname, low_str, up_str))
 
         # Generar LaTeX de la integral original (limpia: externa a interna, sin vacíos)
         # orden_display: externa a interna para límites
         orden_display = orden_vars[::-1]  # Reverso para display (externa primero)
         integrals_parts = []
-        for i, varname in enumerate(orden_display):
+        for varname in orden_display:
             var_latex = var_latex_map[varname]
             lower, upper = limites_parsed[varname]
-            integrals_parts.append(f"\\int_{{{var_latex} = {latex(lower)}}}^{{{latex(upper)}}}}")
+            # Usar .format() para evitar f-string issues en límites complejos
+            int_part = "\\int_{{{var_latex} = {lower}}}^{{{upper}}}}".format(var_latex=var_latex, lower=latex(lower), upper=latex(upper))
+            integrals_parts.append(int_part)
         # Función y diferenciales (diferenciales: interna a externa, que es orden_vars)
-        diff_parts = [f"d{var_latex_map[v]}" for v in orden_vars]
-        integral_latex = " ".join(integrals_parts) + f" {latex(f)} \\, " + " \\, ".join(diff_parts)
+        diff_parts = ["d{}".format(var_latex_map[v]) for v in orden_vars]
+        integral_latex = " ".join(integrals_parts) + " {} \\, ".format(latex(f)) + " \\, ".join(diff_parts)
 
         # Sección "Ejercicio Propuesto" como HTML destacado (sin \iiint extra)
         tipo = "triple" if is_triple else "doble"
-        ejercicio_html = f"""
+        ejercicio_html = """
         <div style="text-align: center; background: #2A2A2A; padding: 20px; margin-bottom: 30px; border-radius: 10px; border: 2px solid #4CAF50;">
             <h3 style="color: #4CAF50; margin-bottom: 10px;">Ejercicio Propuesto</h3>
-            <p style="margin-bottom: 15px; font-size: 16px;">Resuelve la siguiente integral {tipo}:</p>
-            <div class="math">$$ {integral_latex} $$</div>
+            <p style="margin-bottom: 15px; font-size: 16px;">Resuelve la siguiente integral {}:</p>
+            <div class="math">$$ {} $$</div>
         </div>
-        """
+        """.format(tipo, integral_latex)
 
         steps = [ejercicio_html]
         result = f
@@ -137,7 +145,8 @@ def calcular_integral():
             lower, upper = limites_parsed[varname]
             var_latex = var_latex_map[varname]
             html, result = generar_paso_integral(result, var, lower, upper, paso, var_latex)
-            steps.append(f"<p><strong>Paso {paso} (integración respecto a {var_latex}):</strong></p>" + html)
+            step_header = "<p><strong>Paso {} (integración respecto a {}):</strong></p>".format(paso, var_latex)
+            steps.append(step_header + html)
             paso += 1
 
         steps_html = "<h2>Desglose Detallado Paso a Paso</h2>" + "".join(steps)
@@ -153,3 +162,5 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+
