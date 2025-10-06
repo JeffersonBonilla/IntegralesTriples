@@ -1,21 +1,12 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, sympify, pi, sqrt, degree
+from sympy import symbols, integrate, latex, sympify, sqrt, pi
 import sympy as sp
 
 app = Flask(__name__)
 
+# Para mostrar variables bonitas en LaTeX
 def simbolo(varname):
     return {"theta": "\\theta", "phi": "\\varphi"}.get(varname, varname)
-
-def generar_explicacion(f, var):
-    if f.is_constant(var):
-        return f"Es constante respecto a {simbolo(var.name)}. Entonces $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(f)}{simbolo(var.name)} + C$$"
-    elif degree(f, var) > 0:
-        return f"Usa la regla de potencia: $$\\int {simbolo(var.name)}^n \\, d{simbolo(var.name)} = \\frac{{{simbolo(var.name)}^{{n+1}}}}{{n+1}} + C$$"
-    elif f.has(sp.sin) or f.has(sp.cos):
-        return "Usa reglas trigonométricas, por ejemplo: $$\\int \\sin u \\, du = -\\cos u + C$$"
-    else:
-        return f"Antiderivada simbólica de $$ {latex(f)} $$ respecto a {simbolo(var.name)}."
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
     """Paso de integración mostrando constantes explícitas frente a la integral."""
@@ -23,10 +14,7 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         # Separar factores constantes respecto a var
         f_const, f_var = f.as_independent(var, as_Add=False)
 
-        # Integral indefinida de la parte variable
-        F_var_indef = integrate(f_var, var)
-
-        # Integral definida
+        # Integral definida de la parte variable
         F_var_def = integrate(f_var, (var, lower, upper))
         resultado = sp.simplify(f_const * F_var_def)
 
@@ -42,7 +30,6 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
     except Exception as e:
         return f"<p>Error en integración: {str(e)}</p>", f
 
-
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
     try:
@@ -50,14 +37,6 @@ def calcular_integral():
         function_str = data.get('function', '').replace('\\pi', 'pi').replace('\\theta', 'theta').replace('\\phi', 'phi').replace('\\sqrt', 'sqrt')
         order = data.get('order', 'dydx').lower().strip()
         is_triple = data.get('is_triple', False)
-
-        # Límites recibidos
-        x1_str = data.get('x1', '0')
-        x2_str = data.get('x2', '1')
-        y1_str = data.get('y1', '0')
-        y2_str = data.get('y2', '1')
-        z1_str = data.get('z1', '0')
-        z2_str = data.get('z2', '1')
 
         # Símbolos
         x, y, z, r, theta, phi = symbols('x y z r theta phi')
@@ -75,24 +54,25 @@ def calcular_integral():
         if len(orden_vars) != expected_vars:
             raise ValueError(f"Orden inválido: espera {expected_vars} variables para {'triple' if is_triple else 'doble'} integral. Encontradas: {orden_vars}")
 
-        # Asignar límites
-        var_to_limites = {
-            'x': (x1_str, x2_str),
-            'theta': (x1_str, x2_str),
-            'y': (y1_str, y2_str),
-            'r': (y1_str, y2_str),
-            'z': (z1_str, z2_str),
-            'phi': (z1_str, z2_str)
+        # Límites recibidos
+        limites_input = {
+            'x': (data.get('x1','0'), data.get('x2','1')),
+            'y': (data.get('y1','0'), data.get('y2','1')),
+            'z': (data.get('z1','0'), data.get('z2','1')),
+            'r': (data.get('y1','0'), data.get('y2','1')),
+            'theta': (data.get('x1','0'), data.get('x2','1')),
+            'phi': (data.get('z1','0'), data.get('z2','1'))
         }
 
+        # Parsear límites
         limites_parsed = {}
         for varname in orden_vars:
-            low_str, up_str = var_to_limites[varname]
+            low_str, up_str = limites_input[varname]
             lower = sympify(low_str, locals=locals_dict)
             upper = sympify(up_str, locals=locals_dict)
             limites_parsed[varname] = (lower, upper)
 
-        # Integral en LaTeX según orden del usuario
+        # Integral original en LaTeX según orden del usuario
         integrals = []
         for varname in orden_vars:
             lower, upper = limites_parsed[varname]
@@ -135,7 +115,5 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
 
 
