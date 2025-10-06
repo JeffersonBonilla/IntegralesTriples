@@ -41,6 +41,7 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
     except Exception as e:
         return f"<p>Error en integración: {str(e)}</p>", f  # fallback
 
+
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
     try:
@@ -90,18 +91,13 @@ def calcular_integral():
             upper = sp.sympify(up_str, locals=locals_dict)
             limites_parsed[varname] = (lower, upper)
 
-        # Crear integral simbólica para mostrar (orden invertido para integraciones)
-        orden_display = orden_vars[::-1]
-        integrals = []
-        for varname in orden_display:
-            lower, upper = limites_parsed[varname]
-            integrals.append(f"\\int_{{{latex(lower)}}}^{{{latex(upper)}}}")
-        integral_latex = " ".join(integrals) + f" {latex(f)} \\, " + " \\, ".join([f"d{simbolo(varname)}" for varname in orden_display])
+        # === Nueva forma de mostrar la integral ===
         tipo_integral = "\\iiint" if is_triple else "\\iint"
-        integral_original = f"{tipo_integral} {integral_latex}"
-
-        # Orden de integración mostrado igual que el usuario lo ingresó
-        orden_ingresado_render = " ".join([f"d{simbolo(v)}" for v in orden_vars])
+        orden_ingresado_render = "".join([f"d{simbolo(v)}" for v in orden_vars])
+        
+        # Solo una integral principal con todos los límites y el orden junto a la función
+        lower_first, upper_last = limites_parsed[orden_vars[-1]][0], limites_parsed[orden_vars[0]][1]
+        integral_original = f"{tipo_integral}_{{{latex(lower_first)}}}^{{{latex(upper_last)}}} {latex(f)}{orden_ingresado_render}"
 
         # Ejercicio propuesto
         tipo = "triple" if is_triple else "doble"
@@ -110,11 +106,10 @@ def calcular_integral():
             <h3 style="color: #4CAF50; margin-bottom: 10px;">Ejercicio Propuesto</h3>
             <p style="margin-bottom: 15px; font-size: 16px;">Resuelve la siguiente integral {tipo}:</p>
             <div class="math">$$ {integral_original} $$</div>
-            <p style="color: #AAAAAA; margin-top: 10px;">Orden de integración: $$ {orden_ingresado_render} $$</p>
         </div>
         """
 
-        # Secuencia de pasos
+        # === Secuencia de pasos ===
         steps = [ejercicio_html]
         result = f
         paso = 1
@@ -137,7 +132,6 @@ def calcular_integral():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
-
