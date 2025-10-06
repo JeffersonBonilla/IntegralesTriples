@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, SympifyError, pi, sqrt, degree
+from sympy import symbols, integrate, latex, pi, sqrt, degree
 import sympy as sp
 
 app = Flask(__name__)
@@ -40,7 +40,6 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         return html, resultado
     except Exception as e:
         return f"<p>Error en integración: {str(e)}</p>", f  # fallback
-
 
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
@@ -91,16 +90,13 @@ def calcular_integral():
             upper = sp.sympify(up_str, locals=locals_dict)
             limites_parsed[varname] = (lower, upper)
 
-        # === Nueva forma de mostrar la integral ===
+        # === Construcción correcta de la integral ===
         tipo_integral = "\\iiint" if is_triple else "\\iint"
-        orden_ingresado_render = "".join([f"d{simbolo(v)}" for v in orden_vars])
-        limites = "".join([f"_{{{latex(limites_parsed[v][0])}}}^{{{latex(limites_parsed[v][1])}}}" for v in reversed(orden_vars)])
-        integral_original = f"{tipo_integral}{limites} {latex(f)}{orden_ingresado_render}"
-
-        
-        # Solo una integral principal con todos los límites y el orden junto a la función
-        lower_first, upper_last = limites_parsed[orden_vars[-1]][0], limites_parsed[orden_vars[0]][1]
-        integral_original = f"{tipo_integral}_{{{latex(lower_first)}}}^{{{latex(upper_last)}}} {latex(f)}{orden_ingresado_render}"
+        integral_parts = []
+        for varname in orden_vars:
+            lower, upper = limites_parsed[varname]
+            integral_parts.append(f"\\int_{{{latex(lower)}}}^{{{latex(upper)}}} d{simbolo(varname)}")
+        integral_original = tipo_integral + " " + " ".join(integral_parts) + f" {latex(f)}"
 
         # Ejercicio propuesto
         tipo = "triple" if is_triple else "doble"
