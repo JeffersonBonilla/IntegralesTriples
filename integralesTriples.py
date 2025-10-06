@@ -5,11 +5,9 @@ import sympy as sp
 app = Flask(__name__)
 
 def simbolo(varname):
-    """Convierte nombres de variables a símbolos LaTeX bonitos."""
     return {"theta": "\\theta", "phi": "\\varphi"}.get(varname, varname)
 
 def generar_explicacion(f, var):
-    """Genera explicación textual simple para la integral."""
     if f.is_constant(var):
         return f"Es constante respecto a {simbolo(var.name)}. Entonces $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(f)}{simbolo(var.name)} + C$$"
     elif degree(f, var) > 0:
@@ -20,21 +18,16 @@ def generar_explicacion(f, var):
         return f"Antiderivada simbólica de $$ {latex(f)} $$ respecto a {simbolo(var.name)}."
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
-    """Genera HTML detallado para un paso de integración."""
+    """Ahora usa integración definida directa para evitar errores de variables constantes"""
     try:
-        F = integrate(f, var)  # Antiderivada indefinida
+        # Integración definida directa
+        resultado = integrate(f, (var, lower, upper))
         explicacion = generar_explicacion(f, var)
-        
-        F_upper = F.subs(var, upper)
-        F_lower = F.subs(var, lower)
-        resultado = sp.simplify(F_upper - F_lower)
-        
+
         html = f"""
         <div style="margin-bottom: 20px; padding: 15px; background: #1A1A1A; border-left: 3px solid #4CAF50; border-radius: 5px;">
             <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{simbolo(var.name)}$$</p>
-            <p><strong>Subpaso {paso_num}b:</strong> {explicacion}. La antiderivada indefinida es $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(F)} + C$$</p>
-            <p><strong>Subpaso {paso_num}c:</strong> Evaluación en límites: $$[{latex(F)}]_{{{latex(lower)}}}^{{{latex(upper)}}} = {latex(F_upper)} - {latex(F_lower)} = {latex(resultado)}$$</p>
-            <p><strong>Subpaso {paso_num}d:</strong> Resultado simplificado: $$ {latex(resultado)} $$</p>
+            <p><strong>Subpaso {paso_num}b:</strong> {explicacion}. La integral definida da: $$ {latex(resultado)} $$</p>
         </div>
         """
         return html, resultado
@@ -133,3 +126,5 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
+
