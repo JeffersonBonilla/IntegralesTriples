@@ -11,13 +11,13 @@ def simbolo(varname):
 def generar_explicacion(f, var):
     """Explicación textual simple para la integral."""
     if f.is_constant(var):  # Constante respecto a var
-        return f"Esta es una constante respecto a {var.name}. La integral es {latex(f)} \\cdot {simbolo(var.name)} + C."
+        return f"Es constante respecto a {simbolo(var.name)}. Entonces $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(f)}{simbolo(var.name)} + C$$"
     elif degree(f, var) > 0:  # Polinomio
-        return f"Usa la regla de potencia: \\\\int {simbolo(var.name)}^n d{simbolo(var.name)} = \\\\frac{{ {simbolo(var.name)}^{{n+1}} }}{{n+1}} + C."
+        return f"Usa la regla de potencia: $$\\int {simbolo(var.name)}^n \\, d{simbolo(var.name)} = \\frac{{{simbolo(var.name)}^{{n+1}}}}{{n+1}} + C$$"
     elif f.has(sp.sin) or f.has(sp.cos):
-        return "Usa reglas de integración trigonométrica (ej. \\\\int \\\\sin u du = -\\\\cos u + C)."
+        return "Usa reglas trigonométricas, por ejemplo: $$\\int \\sin u \\, du = -\\cos u + C$$"
     else:
-        return f"Antiderivada simbólica de {latex(f)} respecto a {simbolo(var.name)}."
+        return f"Antiderivada simbólica de $$ {latex(f)} $$ respecto a {simbolo(var.name)}."
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
     """Genera HTML detallado para un paso de integración."""
@@ -32,14 +32,14 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         html = f"""
         <div style="margin-bottom: 20px; padding: 15px; background: #1A1A1A; border-left: 3px solid #4CAF50; border-radius: 5px;">
             <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{simbolo(var.name)}$$</p>
-            <p><strong>Subpaso {paso_num}b:</strong> {explicacion} La antiderivada indefinida es $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(F)} + C$$.</p>
+            <p><strong>Subpaso {paso_num}b:</strong> {explicacion}. La antiderivada indefinida es $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(F)} + C$$</p>
             <p><strong>Subpaso {paso_num}c:</strong> Evaluación en límites: $$[{latex(F)}]_{{{latex(lower)}}}^{{{latex(upper)}}} = {latex(F_upper)} - {latex(F_lower)} = {latex(resultado)}$$</p>
             <p><strong>Subpaso {paso_num}d:</strong> Resultado simplificado: $$ {latex(resultado)} $$</p>
         </div>
         """
         return html, resultado
     except Exception as e:
-        return f"<p>Error en integración: {str(e)}</p>", f  # Fallback
+        return f"<p>Error en integración: {str(e)}</p>", f  # fallback
 
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
@@ -90,7 +90,7 @@ def calcular_integral():
             upper = sp.sympify(up_str, locals=locals_dict)
             limites_parsed[varname] = (lower, upper)
 
-        # Integral original en LaTeX
+        # Integral original en LaTeX (sin integrales vacías)
         orden_display = orden_vars[::-1]
         integrals = []
         for varname in orden_display:
@@ -135,6 +135,5 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
 
 
