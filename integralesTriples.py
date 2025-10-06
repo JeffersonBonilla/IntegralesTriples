@@ -18,34 +18,27 @@ def generar_explicacion(f, var):
         return f"Antiderivada simbólica de $$ {latex(f)} $$ respecto a {simbolo(var.name)}."
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
-    """Paso de integración que evita errores con constantes."""
+    """Paso de integración mostrando constantes explícitas frente a la integral."""
     try:
-        # Verificar si f depende de otras variables además de var
-        otras_vars = f.free_symbols - {var}
-        if otras_vars:
-            F_indef = None  # No mostrar antiderivada indefinida
-            explicacion = f"Integrando respecto a {simbolo(var.name)}, tratamos las demás variables como constantes."
-        else:
-            F_indef = integrate(f, var)
-            explicacion = generar_explicacion(f, var)
+        # Separar factores constantes respecto a var
+        f_const, f_var = f.as_independent(var, as_Add=False)
 
-        # Integral definida directa (siempre segura)
-        resultado = integrate(f, (var, lower, upper))
+        # Integral indefinida de la parte variable
+        F_var_indef = integrate(f_var, var)
 
-        # Construir HTML paso a paso
+        # Integral definida
+        F_var_def = integrate(f_var, (var, lower, upper))
+        resultado = sp.simplify(f_const * F_var_def)
+
         html = f"""
         <div style="margin-bottom: 20px; padding: 15px; background: #1A1A1A; border-left: 3px solid #4CAF50; border-radius: 5px;">
             <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{simbolo(var.name)}$$</p>
+            <p><strong>Subpaso {paso_num}b:</strong> Factorizamos las constantes respecto a {simbolo(var.name)}: $$ {latex(f)} = {latex(f_const)} \\cdot {latex(f_var)} $$</p>
+            <p><strong>Subpaso {paso_num}c:</strong> Integral de la parte variable: $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f_var)} \\, d{simbolo(var.name)} = {latex(F_var_def)}$$</p>
+            <p><strong>Subpaso {paso_num}d:</strong> Multiplicamos por la constante: $$ {latex(f_const)} \\cdot {latex(F_var_def)} = {latex(resultado)} $$</p>
+        </div>
         """
-        if F_indef is not None:
-            html += f"<p><strong>Subpaso {paso_num}b:</strong> {explicacion}. La antiderivada indefinida es $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(F_indef)} + C$$</p>"
-        else:
-            html += f"<p><strong>Subpaso {paso_num}b:</strong> {explicacion}</p>"
-
-        html += f"<p><strong>Subpaso {paso_num}c:</strong> Evaluación directa de la integral definida: $$ {latex(resultado)} $$</p></div>"
-
         return html, resultado
-
     except Exception as e:
         return f"<p>Error en integración: {str(e)}</p>", f
 
@@ -142,6 +135,7 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
 
 
