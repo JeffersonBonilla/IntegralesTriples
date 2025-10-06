@@ -94,6 +94,9 @@ def calcular_integral():
         # === Nueva forma de mostrar la integral ===
         tipo_integral = "\\iiint" if is_triple else "\\iint"
         orden_ingresado_render = "".join([f"d{simbolo(v)}" for v in orden_vars])
+        limites = "".join([f"_{{{latex(limites_parsed[v][0])}}}^{{{latex(limites_parsed[v][1])}}}" for v in reversed(orden_vars)])
+        integral_original = f"{tipo_integral}{limites} {latex(f)}{orden_ingresado_render}"
+
         
         # Solo una integral principal con todos los límites y el orden junto a la función
         lower_first, upper_last = limites_parsed[orden_vars[-1]][0], limites_parsed[orden_vars[0]][1]
@@ -135,3 +138,4 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
