@@ -18,16 +18,21 @@ def generar_explicacion(f, var):
         return f"Antiderivada simbólica de $$ {latex(f)} $$ respecto a {simbolo(var.name)}."
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
-    """Ahora usa integración definida directa para evitar errores de variables constantes"""
+    """Genera paso mostrando antiderivada indefinida y resultado de integral definida"""
     try:
-        # Integración definida directa
+        # Antiderivada indefinida
+        F_indef = integrate(f, var)
+
+        # Integral definida directa (maneja constantes automáticamente)
         resultado = integrate(f, (var, lower, upper))
+
         explicacion = generar_explicacion(f, var)
 
         html = f"""
         <div style="margin-bottom: 20px; padding: 15px; background: #1A1A1A; border-left: 3px solid #4CAF50; border-radius: 5px;">
             <p><strong>Subpaso {paso_num}a:</strong> La integral definida es $$\\int_{{{latex(lower)}}}^{{{latex(upper)}}} {latex(f)} \\, d{simbolo(var.name)}$$</p>
-            <p><strong>Subpaso {paso_num}b:</strong> {explicacion}. La integral definida da: $$ {latex(resultado)} $$</p>
+            <p><strong>Subpaso {paso_num}b:</strong> {explicacion}. La antiderivada indefinida es $$\\int {latex(f)} \\, d{simbolo(var.name)} = {latex(F_indef)} + C$$</p>
+            <p><strong>Subpaso {paso_num}c:</strong> Evaluación directa de la integral definida: $$ {latex(resultado)} $$</p>
         </div>
         """
         return html, resultado
@@ -126,5 +131,4 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
 
