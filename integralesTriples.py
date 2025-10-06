@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from sympy import symbols, integrate, latex, pi, sqrt, degree
+from sympy import symbols, integrate, latex, SympifyError, pi, sqrt, degree
 import sympy as sp
 
 app = Flask(__name__)
@@ -90,13 +90,18 @@ def calcular_integral():
             upper = sp.sympify(up_str, locals=locals_dict)
             limites_parsed[varname] = (lower, upper)
 
-        # === Construcción correcta de la integral ===
-        tipo_integral = "\\iiint" if is_triple else "\\iint"
-        integral_parts = []
-        for varname in orden_vars:
+        # Crear integral simbólica para mostrar (orden invertido para integraciones)
+        orden_display = orden_vars[::-1]
+        integrals = []
+        for varname in orden_display:
             lower, upper = limites_parsed[varname]
-            integral_parts.append(f"\\int_{{{latex(lower)}}}^{{{latex(upper)}}} d{simbolo(varname)}")
-        integral_original = tipo_integral + " " + " ".join(integral_parts) + f" {latex(f)}"
+            integrals.append(f"\\int_{{{latex(lower)}}}^{{{latex(upper)}}}")
+            integral_latex = f"{latex(f)} \\, " + " \\, ".join([f"d{simbolo(v)}" for v in orden_vars])
+            tipo_integral = "\\iiint" if is_triple else "\\iint"
+            integral_original = f"{tipo_integral} {integral_latex}"
+
+        # Orden de integración mostrado igual que el usuario lo ingresó
+        orden_ingresado_render = " ".join([f"d{simbolo(v)}" for v in orden_vars])
 
         # Ejercicio propuesto
         tipo = "triple" if is_triple else "doble"
@@ -105,10 +110,11 @@ def calcular_integral():
             <h3 style="color: #4CAF50; margin-bottom: 10px;">Ejercicio Propuesto</h3>
             <p style="margin-bottom: 15px; font-size: 16px;">Resuelve la siguiente integral {tipo}:</p>
             <div class="math">$$ {integral_original} $$</div>
+            <p style="color: #AAAAAA; margin-top: 10px;">Orden de integración: $$ {orden_ingresado_render} $$</p>
         </div>
         """
 
-        # === Secuencia de pasos ===
+        # Secuencia de pasos
         steps = [ejercicio_html]
         result = f
         paso = 1
@@ -131,7 +137,5 @@ def calcular_integral():
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
-
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-
