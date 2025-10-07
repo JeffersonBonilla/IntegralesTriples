@@ -58,7 +58,7 @@ def calcular_integral():
         # Parsear funcion
         f = sympify(function_str, locals=locals_dict)
 
-        # Orden de integración
+        # Orden de integracion
         if not order.startswith('d'):
             order = 'd' + order
         orden_vars = [s for s in order.split('d')[1:] if s]
@@ -128,6 +128,7 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
 
 
