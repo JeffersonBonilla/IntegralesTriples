@@ -77,7 +77,7 @@ def calcular_integral():
             'phi': (data.get('z1','0'), data.get('z2','1'))
         }
 
-        # Parsear límites simbolicamente
+        # Parsear limites simbolicamente
         limites_parsed = {}
         for varname in orden_vars:
             low_str, up_str = limites_input[varname]
@@ -128,6 +128,7 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
 
 
