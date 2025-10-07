@@ -3,14 +3,14 @@ from sympy import symbols, integrate, latex, sympify, sqrt, pi, simplify
 
 app = Flask(__name__)
 
-# Para mostrar variables bonitas en LaTeX
+# Para mostrar variables en LaTeX osea dibujarlas
 def simbolo(varname):
     return {"theta": "\\theta", "phi": "\\varphi"}.get(varname, varname)
 
 def generar_paso_integral(f, var, lower, upper, paso_num):
     """
-    Genera HTML detallado para un paso de integración,
-    evaluando la integral en los límites y pasando el resultado al siguiente paso.
+    Genera HTML detallado para un paso de integracion,
+    evaluando la integral en los limites y pasando el resultado al siguiente paso.
     """
     try:
         # Separamos constantes respecto a la variable actual
@@ -19,7 +19,7 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         # Integral indefinida de la parte variable
         F_var = integrate(f_var, var)
 
-        # Evaluar en los límites
+        # Evaluar en los limites
         F_upper = F_var.subs(var, upper)
         F_lower = F_var.subs(var, lower)
         resultado = simplify(f_const * (F_upper - F_lower))  # Integral definida
@@ -41,7 +41,7 @@ def generar_paso_integral(f, var, lower, upper, paso_num):
         """
         return html, resultado
     except Exception as e:
-        return f"<p>Error en integración: {str(e)}</p>", f
+        return f"<p>Error en integracion: {str(e)}</p>", f
 
 @app.route('/integral', methods=['POST'])
 def calcular_integral():
@@ -51,11 +51,11 @@ def calcular_integral():
         order = data.get('order', 'dydx').lower().strip()
         is_triple = data.get('is_triple', False)
 
-        # Símbolos
+        # Simbolos
         x, y, z, r, theta, phi = symbols('x y z r theta phi')
         locals_dict = {'x': x, 'y': y, 'z': z, 'r': r, 'theta': theta, 'phi': phi, 'pi': pi, 'sqrt': sqrt}
 
-        # Parsear función
+        # Parsear funcion
         f = sympify(function_str, locals=locals_dict)
 
         # Orden de integración
@@ -65,9 +65,9 @@ def calcular_integral():
 
         expected_vars = 3 if is_triple else 2
         if len(orden_vars) != expected_vars:
-            raise ValueError(f"Orden inválido: espera {expected_vars} variables para {'triple' if is_triple else 'doble'} integral.")
+            raise ValueError(f"Orden invalido: espera {expected_vars} variables para {'triple' if is_triple else 'doble'} integral.")
 
-        # Límites ingresados
+        # Limites ingresados
         limites_input = {
             'x': (data.get('x1','0'), data.get('x2','1')),
             'y': (data.get('y1','0'), data.get('y2','1')),
@@ -77,7 +77,7 @@ def calcular_integral():
             'phi': (data.get('z1','0'), data.get('z2','1'))
         }
 
-        # Parsear límites simbólicamente
+        # Parsear límites simbolicamente
         limites_parsed = {}
         for varname in orden_vars:
             low_str, up_str = limites_input[varname]
@@ -112,7 +112,7 @@ def calcular_integral():
             var = locals_dict[varname]
             lower, upper = limites_parsed[varname]
             html, result = generar_paso_integral(result, var, lower, upper, paso)
-            steps.append(f"<p><strong>Paso {paso} (integración respecto a {simbolo(varname)}):</strong></p>" + html)
+            steps.append(f"<p><strong>Paso {paso} (integracion respecto a {simbolo(varname)}):</strong></p>" + html)
             paso += 1
 
         steps_html = "<h2>Desglose Detallado Paso a Paso</h2>" + "".join(steps)
@@ -128,5 +128,6 @@ def calcular_integral():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+
 
 
